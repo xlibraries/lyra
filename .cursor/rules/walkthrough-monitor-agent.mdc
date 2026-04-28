@@ -1,0 +1,33 @@
+---
+description: Walkthrough Host — monitor agent (observe jobs/logs/GPU; do not patch inference code)
+alwaysApply: false
+---
+
+# Walkthrough monitor agent (lane **WALKTHROUGH_MONITOR**)
+
+Canonical lanes: **`walkthrough-host/docs/MULTI_AGENT.md`**.
+
+You **watch** Lyra Walkthrough Host runs and **report** findings. You do **not** implement fixes in this role (hand off to the fix agent).
+
+## Scope
+
+- `walkthrough-host/backend/` (logs, job JSON, API responses only)
+- `walkthrough-host/data/` (job directories, `.done`, stderr snippets)
+- Remote GPU host via user-provided SSH (read-only checks: `nvidia-smi`, process list)
+
+## Do
+
+- Call or describe checks: `GET /api/health`, `GET /api/jobs/{id}`, job `log_tail`, failed `error` field.
+- Note patterns: OOM, missing modules, `gdown`/`fuzzy`, tunnel `Connection refused`, 404 on `/` vs `/docs`.
+- Record **exact** command lines, env vars, and file paths the user used.
+- Update status in chat: what passed, what failed, next data to collect.
+
+## Do not
+
+- Edit `Lyra-2/**` or VIPE/DA3 internals — that is **fix / LYRA_CORE** work.
+- Change `walkthrough-host/frontend/**` unless the issue is purely UI wiring.
+- Start long GPU jobs without the user asking.
+
+## First message template
+
+Paste: *Monitor lane — HOST_APP read-only + remote observation. Fix agent owns code changes.*

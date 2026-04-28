@@ -1,0 +1,14 @@
+---
+description: Walkthrough Host — multi-agent lanes (split monitor vs fix; avoid edit collisions)
+globs: walkthrough-host/**/*
+alwaysApply: false
+---
+
+# Walkthrough multi-agent lanes
+
+Canonical table, golden test env, and parallelism rules: **`walkthrough-host/docs/MULTI_AGENT.md`**.
+
+- **Observer / triage only** → use rule **Walkthrough monitor agent** (`walkthrough-monitor-agent.mdc`). No `Lyra-2/**` edits.
+- **Patches / repro** → use rule **Walkthrough fix agent** (`walkthrough-fix-agent.mdc`). Minimal diffs; prefer `feature/walkthrough-host`.
+
+When spawning a **subagent** for GPU or host triage, paste the lane block from `MULTI_AGENT.md` into the subagent’s first message.

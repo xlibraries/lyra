@@ -1,0 +1,35 @@
+---
+description: Walkthrough Host — fix agent (repro, patch Lyra or host; minimal diffs)
+alwaysApply: false
+---
+
+# Walkthrough fix agent (lane **WALKTHROUGH_FIX**)
+
+Canonical lanes: **`walkthrough-host/docs/MULTI_AGENT.md`**.
+
+You **reproduce** failures and **apply minimal code or config** changes. You coordinate with the monitor agent’s report.
+
+## Lane boundaries (strict)
+
+| Area | Paths |
+|------|--------|
+| **HOST_APP** | `walkthrough-host/backend/`, `frontend/`, `scripts/`, `docker/` |
+| **LYRA_CORE** | `Lyra-2/lyra_2/**` (inference, VIPE, DA3, `vipe_da3_gs_recon.py`) |
+| **HOST_DOCS** | `walkthrough-host/docs/` |
+
+Do not mix lanes in one change set without cause. OOM / `gdown` / subprocess VIPE → usually **LYRA_CORE**.
+
+## Do
+
+- Use the **flam360 env** when reproducing locally: `walkthrough-host/env/flam360.mp4.env` + `scripts/upload_test_video.sh`.
+- Prefer **subprocess isolation**, **defer DA3 load**, **gdown compatibility**, **backend `pip install -r`** — patterns already documented in recent commits.
+- After edits, **sync** critical files to the user’s GPU host (`scp`) when they use Vast.ai, or give one copy-paste block.
+
+## Do not
+
+- Drive-by refactors or unrelated formatting.
+- Add new dependencies without checking `requirements.txt` / bootstrap scripts.
+
+## First message template
+
+Paste: *Fix lane — [HOST_APP | LYRA_CORE]. Symptom: … Repro: flam360 env + …*

@@ -9,8 +9,9 @@ Use **one lane per parallel agent** so edits, searches, and commits do not colli
 | **LYRA_CORE** | `Lyra-1/`, `Lyra-2/` | Upstream Lyra training/inference, submodules, checkpoints layout — **not** the web host. |
 | **HOST_APP** | `walkthrough-host/backend/`, `walkthrough-host/frontend/`, `walkthrough-host/docker/`, `walkthrough-host/data/` (runtime only) | Upload API, UI, containers, local job storage. |
 | **HOST_DOCS** | `walkthrough-host/docs/`, `walkthrough-host/README.md` | Plans, architecture, integrations, this file. |
-| **WALKTHROUGH_MONITOR** | Read-only: job logs, `GET /api/*`, `walkthrough-host/data/**`, remote `nvidia-smi` | Observer agent: triage failures, **no** `Lyra-2/**` edits. Cursor rule: `walkthrough-monitor-agent`. |
-| **WALKTHROUGH_FIX** | `Lyra-2/**` and/or `walkthrough-host/**` per symptom | Remediation agent: minimal patches, repro with `walkthrough-host/env/flam360.mp4.env`. Cursor rule: `walkthrough-fix-agent`. |
+| **WALKTHROUGH_MONITOR** | Read-only: job logs, `GET /api/*`, `walkthrough-host/data/**`, remote `nvidia-smi` | Observer agent: triage failures, **no** `Lyra-2/**` edits. Cursor: rule **Walkthrough monitor agent** (`.cursor/rules/walkthrough-monitor-agent.mdc`). |
+| **WALKTHROUGH_FIX** | `Lyra-2/**` and/or `walkthrough-host/**` per symptom | Remediation agent: minimal patches, repro with `walkthrough-host/env/flam360.mp4.env`. Cursor: rule **Walkthrough fix agent** (`.cursor/rules/walkthrough-fix-agent.mdc`). |
+| **(scope hint)** | `walkthrough-host/**` | Cursor: rule **Walkthrough multi-agent lanes** (`.cursor/rules/walkthrough-multi-agent-lanes.mdc`) — opens when editing the host; points here. |
 | **META** | `.cursor/rules/` (optional), repo-root `README.md` | Cross-cutting pointers only; avoid drive-by edits to Lyra inference code. |
 
 **Rule:** An agent assigned **HOST_APP** must not modify `Lyra-2/lyra_2/**` except via a separate **LYRA_CORE** task and its own commit.
