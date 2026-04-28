@@ -8,4 +8,5 @@ cd "$ROOT/frontend"
 echo ">>> Lyra Walkthrough UI — open http://localhost:5173/"
 echo ">>> Vite /api proxy → ${WALKTHROUGH_PROXY_TARGET}"
 echo ">>> If you use e.g. ssh -L 8080:localhost:8080, run: WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:8080 $0"
+echo ">>> Optional incremental PLY load: VITE_SPLAT_PROGRESSIVE_LOAD=true (can stall on slow tunnels)."
 exec npm run dev

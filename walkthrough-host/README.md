@@ -31,7 +31,9 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000.
+Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000 (or `WALKTHROUGH_PROXY_TARGET`).
+
+**Large PLY (~1GB+):** By default the splat viewer **buffers the full file** then parses (more reliable through SSH). For **incremental stream + earlier first splats**, set `VITE_SPLAT_PROGRESSIVE_LOAD=true` when running `npm run dev` (see `@mkkellogg/gaussian-splats-3d` `progressiveLoad`). The network still delivers the whole asset; there is no separate “server streaming” mode in this host.
 
 **Remote GPU + local UI:** run the API on the machine with the GPU (e.g. Vast), then on your Mac run `ssh … -L LOCAL:localhost:PORT` and `walkthrough-host/scripts/mac_run_frontend.sh`. If `LOCAL`/`PORT` are not 8000, set **`WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:LOCAL`** before `npm run dev` so Vite’s `/api` proxy hits your tunnel. See [docs/VAST_QUICKSTART.md](./docs/VAST_QUICKSTART.md) §2.
 

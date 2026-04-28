@@ -13,6 +13,8 @@ declare module "@mkkellogg/gaussian-splats-3d" {
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE: string;
+  /** "true" = stream/parse PLY incrementally (see GaussianSplatViewer). Can stall through slow SSH tunnels. */
+  readonly VITE_SPLAT_PROGRESSIVE_LOAD?: string;
 }
 
 interface ImportMeta {

@@ -50,7 +50,12 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
           /* ignore — loader will GET the PLY */
         }
         if (cancelled) return;
-        if (headNote) setLoadHint(headNote);
+        const progressiveLoad = import.meta.env.VITE_SPLAT_PROGRESSIVE_LOAD === "true";
+        if (headNote) {
+          setLoadHint(progressiveLoad ? `${headNote} (streaming mode)` : headNote);
+        } else if (progressiveLoad) {
+          setLoadHint(" (streaming — splats appear as data arrives)");
+        }
 
         const G = await import("@mkkellogg/gaussian-splats-3d");
         if (cancelled) return;
@@ -68,13 +73,13 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
         await viewer.init();
         if (cancelled) return;
 
-        // progressiveLoad + dev-server proxy + huge PLY often stalls; full download is slower but more reliable.
-        // SceneFormat.Ply === 2; package typings omit SceneFormat on dynamic import.
+        // progressiveLoad: parse/render as bytes stream in (true "continuous" UX). Default off: often stalls via SSH+Vite.
+        // Opt in: VITE_SPLAT_PROGRESSIVE_LOAD=true (same machine or fast tunnel). Full file still transfers over the network.
         await viewer.addSplatScene(absolutePlyUrl, {
           format: 2,
           splatAlphaRemovalThreshold: 5,
           showLoadingUI: true,
-          progressiveLoad: false,
+          progressiveLoad,
           position: [0, 0, 0],
           rotation: [0, 0, 0, 1],
           scale: [1, 1, 1],
@@ -114,7 +119,8 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
         </div>
         {phase === "loading" && (
           <div style={{ marginTop: "0.35rem", color: "#9aa3b2" }}>
-            Loading PLY…{loadHint ?? ""}
+            {import.meta.env.VITE_SPLAT_PROGRESSIVE_LOAD === "true" ? "Streaming PLY…" : "Loading PLY…"}
+            {loadHint ?? ""}
           </div>
         )}
         {phase === "ready" && (
