@@ -46,6 +46,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 Use empty `VITE_API_BASE` in the built app (same origin). Rebuild after changing API URL.
 
+## Remote GPU (Vast.ai, etc.)
+
+See [docs/VAST_QUICKSTART.md](./docs/VAST_QUICKSTART.md) and `scripts/vast_bootstrap.sh`.
+
 ## Docker
 
 See [docker-compose.yml](./docker-compose.yml). The default API image is **slim** and does **not** bundle Lyra. For real jobs, either extend the image with Lyra-2 or run `uvicorn` directly on the host with your conda environment.
