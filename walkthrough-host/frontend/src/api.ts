@@ -38,8 +38,9 @@ export async function getJob(id: string): Promise<Job> {
   return r.json();
 }
 
+/** Path must end in `.ply` for @mkkellogg/gaussian-splats-3d format detection. */
 export function plyUrl(jobId: string): string {
-  return apiUrl(`/api/jobs/${jobId}/ply`);
+  return apiUrl(`/api/jobs/${jobId}/reconstructed_scene.ply`);
 }
 
 export function previewVideoUrl(jobId: string): string {

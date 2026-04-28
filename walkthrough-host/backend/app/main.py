@@ -80,8 +80,7 @@ def get_job(job_id: str) -> JobPublic:
     return JobPublic.model_validate(rec.to_public(jd))
 
 
-@app.get("/api/jobs/{job_id}/ply")
-def download_ply(job_id: str):
+def _ply_file_response(job_id: str) -> FileResponse:
     rec = store.load(job_id)
     if rec is None:
         raise HTTPException(404, "Job not found")
@@ -95,6 +94,17 @@ def download_ply(job_id: str):
         filename="reconstructed_scene.ply",
         media_type="application/octet-stream",
     )
+
+
+@app.get("/api/jobs/{job_id}/ply")
+def download_ply(job_id: str) -> FileResponse:
+    return _ply_file_response(job_id)
+
+
+@app.get("/api/jobs/{job_id}/reconstructed_scene.ply")
+def download_ply_with_extension(job_id: str) -> FileResponse:
+    """Same as /ply; splat viewers often require a URL path ending in `.ply`."""
+    return _ply_file_response(job_id)
 
 
 @app.get("/api/jobs/{job_id}/preview.mp4")

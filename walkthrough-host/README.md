@@ -77,7 +77,8 @@ See [docker-compose.yml](./docker-compose.yml). The default API image is **slim*
 | GET | `/api/health` | Lyra-2 path check |
 | POST | `/api/jobs` | multipart upload `file` |
 | GET | `/api/jobs/{id}` | job status |
-| GET | `/api/jobs/{id}/ply` | `reconstructed_scene.ply` |
+| GET | `/api/jobs/{id}/ply` | `reconstructed_scene.ply` (alias) |
+| GET | `/api/jobs/{id}/reconstructed_scene.ply` | same file (use for splat viewers that sniff `.ply` in the URL) |
 | GET | `/api/jobs/{id}/preview.mp4` | GS flythrough |
 | GET | `/api/jobs/{id}/log` | last worker log tail |
 

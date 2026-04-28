@@ -61,7 +61,7 @@ flowchart LR
 
 - **Vite + React + TypeScript**.
 - Upload page with progress and job status polling.
-- **Viewer page**: uses `@mkkellogg/gaussian-splats-3d` (or compatible loader) to stream/load the PLY from `/api/jobs/{id}/ply` with WASD / pointer navigation depending on library defaults.
+- **Viewer page**: uses `@mkkellogg/gaussian-splats-3d` to load the PLY from `/api/jobs/{id}/reconstructed_scene.ply` (path must end in `.ply` for format sniffing); `/api/jobs/{id}/ply` remains an alias.
 
 ### Docker (`walkthrough-host/docker`)
 
