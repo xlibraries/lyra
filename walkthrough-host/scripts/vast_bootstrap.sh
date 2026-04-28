@@ -61,6 +61,8 @@ fi
 
 echo ">>> Lyra requirements (no-deps batch — see Lyra-2/INSTALL.md)"
 pip install --no-deps -r requirements.txt
+# hatchling is listed but --no-deps omits its runtime deps; DA3 editable build needs pathspec.
+pip install pathspec
 pip install "git+https://github.com/microsoft/MoGe.git"
 
 # Transformer Engine often fails to build from source on brand-new architectures (e.g. Blackwell).

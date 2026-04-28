@@ -48,6 +48,8 @@ python -m lyra_2._src.inference.vipe_da3_gs_recon --help
 
 For **full Lyra 14B**, try a prebuilt wheel first: `SKIP_FLASH_ATTN=0` after editing the script to use `pip install flash-attn==2.6.3` (no `--no-binary :all:`), or install a newer `flash-attn` if your PyTorch/CUDA combo has wheels.
 
+**If `depth_anything_3` editable install fails with `No module named 'pathspec'`:** Lyra’s `--no-deps` install omits hatchling’s dependencies. Run `pip install pathspec` then re-run the `pip install -e ...depth_anything_3[gs]` line (latest `vast_bootstrap.sh` does this automatically).
+
 Fix any error at the step it prints; then:
 
 ```bash
