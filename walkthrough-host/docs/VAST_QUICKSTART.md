@@ -27,7 +27,22 @@ git submodule update --init --recursive
 ```bash
 cd /root/lyra/walkthrough-host/scripts
 chmod +x vast_bootstrap.sh start_api.sh
+# Default: skips Transformer Engine (not needed for video → splat; often breaks on Blackwell source builds).
 ./vast_bootstrap.sh
+# Full Lyra 14B path (may fail on new GPUs until NVIDIA publishes matching TE wheels):
+# SKIP_TRANSFORMER_ENGINE=0 ./vast_bootstrap.sh
+```
+
+If bootstrap stopped at **`transformer_engine_torch`**, pull the latest `vast_bootstrap.sh` (or set `SKIP_TRANSFORMER_ENGINE=1`) and re-run the script — earlier steps are idempotent.
+
+**Resume manually** from the same shell after `conda activate lyra2` and the same `CUDA_HOME` / `LD_LIBRARY_PATH` / `CC` / `CXX` as in the script:
+
+```bash
+cd /root/lyra/Lyra-2
+MAX_JOBS=16 pip install --no-build-isolation --no-binary :all: "flash-attn==2.6.3"
+USE_SYSTEM_EIGEN=1 pip install --no-build-isolation -e "lyra_2/_src/inference/vipe"
+pip install --no-build-isolation -e "lyra_2/_src/inference/depth_anything_3[gs]"
+pip install -r /root/lyra/walkthrough-host/backend/requirements.txt
 ```
 
 Fix any error at the step it prints; then:

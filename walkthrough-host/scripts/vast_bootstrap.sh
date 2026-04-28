@@ -63,9 +63,16 @@ echo ">>> Lyra requirements (no-deps batch — see Lyra-2/INSTALL.md)"
 pip install --no-deps -r requirements.txt
 pip install "git+https://github.com/microsoft/MoGe.git"
 
-echo ">>> Transformer Engine"
-pip install --no-build-isolation "transformer_engine[pytorch]"
-ln -sf "$SITE/nvidia/cuda_runtime" "$SITE/nvidia/cudart" 2>/dev/null || true
+# Transformer Engine often fails to build from source on brand-new architectures (e.g. Blackwell).
+# It is only needed for Lyra 14B Wan training/inference (wan2pt1), NOT for vipe_da3_gs_recon / walkthrough-host.
+SKIP_TRANSFORMER_ENGINE="${SKIP_TRANSFORMER_ENGINE:-1}"
+if [[ "$SKIP_TRANSFORMER_ENGINE" == "1" ]]; then
+  echo ">>> Skipping Transformer Engine (recon / walkthrough path). Set SKIP_TRANSFORMER_ENGINE=0 to match full Lyra-2 INSTALL."
+else
+  echo ">>> Transformer Engine"
+  pip install --no-build-isolation "transformer_engine[pytorch]"
+  ln -sf "$SITE/nvidia/cuda_runtime" "$SITE/nvidia/cudart" 2>/dev/null || true
+fi
 
 echo ">>> FlashAttention (slow — often 15–40+ min)"
 MAX_JOBS="${MAX_JOBS:-16}"
@@ -84,7 +91,9 @@ echo ">>> Verify imports (may warn)"
 export PYTHONPATH="$LYRA2_DIR"
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())" || true
 python -c "import flash_attn; print('flash_attn ok')" || die "flash_attn import failed"
-python -c "import transformer_engine.pytorch; print('te ok')" || true
+if [[ "$SKIP_TRANSFORMER_ENGINE" != "1" ]]; then
+  python -c "import transformer_engine.pytorch; print('te ok')" || true
+fi
 
 echo ""
 echo "OK — Lyra env ready. Next:"
