@@ -1,7 +1,19 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# walkthrough-host/ (backend lives in walkthrough-host/backend/app/)
+_HOST_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resolve_against_host_root(p: Path) -> Path:
+    """Relative DATA_DIR / LYRA2_ROOT in .env are anchored here, not to process cwd (fixes PLY 404 when cwd is backend/)."""
+    p = Path(p).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    return (_HOST_ROOT / p).resolve()
 
 
 class Settings(BaseSettings):
@@ -20,6 +32,12 @@ class Settings(BaseSettings):
     render_video_gpu_batch: int = 16
     upload_max_mb: int = 2048
     cors_origins: str = "http://127.0.0.1:5173,http://localhost:5173"
+
+    @model_validator(mode="after")
+    def _anchor_relative_paths(self) -> "Settings":
+        object.__setattr__(self, "data_dir", _resolve_against_host_root(self.data_dir))
+        object.__setattr__(self, "lyra2_root", _resolve_against_host_root(self.lyra2_root))
+        return self
 
 
 @lru_cache

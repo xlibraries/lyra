@@ -32,3 +32,6 @@ class HealthResponse(BaseModel):
     ok: bool = True
     lyra2_root_exists: bool
     lyra2_root: str
+    # Resolved job storage (compare to disk if PLY 404 but files exist on GPU).
+    data_dir: str
+    data_dir_exists: bool

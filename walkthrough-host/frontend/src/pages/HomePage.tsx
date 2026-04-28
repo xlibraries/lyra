@@ -14,8 +14,9 @@ export default function HomePage() {
   useEffect(() => {
     health()
       .then((h) => {
+        const jobs = h.data_dir_exists ? `Jobs data: ${h.data_dir}` : `Jobs data missing: ${h.data_dir}`;
         setBackend(
-          h.lyra2_root_exists ? `Lyra-2 OK at ${h.lyra2_root}` : `Lyra-2 path missing: ${h.lyra2_root}`,
+          `${h.lyra2_root_exists ? `Lyra-2 OK at ${h.lyra2_root}` : `Lyra-2 path missing: ${h.lyra2_root}`} · ${jobs}`,
         );
       })
       .catch(() => setBackend("API unreachable — start backend (uvicorn)"));

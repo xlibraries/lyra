@@ -19,7 +19,13 @@ export type Job = {
   output_files?: string[];
 };
 
-export async function health(): Promise<{ ok: boolean; lyra2_root_exists: boolean; lyra2_root: string }> {
+export async function health(): Promise<{
+  ok: boolean;
+  lyra2_root_exists: boolean;
+  lyra2_root: string;
+  data_dir: string;
+  data_dir_exists: boolean;
+}> {
   const r = await fetch(apiUrl("/api/health"));
   if (!r.ok) throw new Error(await r.text());
   return r.json();

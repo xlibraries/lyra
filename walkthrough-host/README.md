@@ -40,7 +40,7 @@ Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000.
 1. **Lyra-2 + weights:** `PYTHONPATH` points at `Lyra-2/`; DA3 recon checkpoint exists (e.g. `checkpoints/recon/model.pt` from Hugging Face `nvidia/Lyra-2.0`).
 2. **Backend:** `cd walkthrough-host/backend && cp .env.example .env` — set `LYRA2_ROOT`, optional `PYTHON_BIN`, `DA3_MODEL_PATH`, `RENDER_VIDEO_GPU_BATCH` (lower if GS video encode OOMs).
 3. **Run API:** `../scripts/start_api.sh` or `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
-4. **Health:** `GET /api/health` → `lyra2_root_exists: true`.
+4. **Health:** `GET /api/health` → `lyra2_root_exists: true` and **`data_dir`** matches `walkthrough-host/data` on the GPU (if PLY 404 but files exist on disk, `DATA_DIR` / cwd was wrong — fixed in code for relative `.env` paths; restart API).
 5. **UI:** `npm run dev` in `frontend/`, upload an MP4, wait for **completed**, open **3D viewer** (PLY + optional `gs_trajectory.mp4` preview).
 6. **Remote GPU:** `docs/VAST_QUICKSTART.md` — `vast_bootstrap.sh` installs deps and applies the VIPE `gdown` compatibility patch after editable VIPE install.
 
@@ -74,7 +74,7 @@ See [docker-compose.yml](./docker-compose.yml). The default API image is **slim*
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/health` | Lyra-2 path check |
+| GET | `/api/health` | Lyra-2 path + resolved **`data_dir`** / `data_dir_exists` |
 | POST | `/api/jobs` | multipart upload `file` |
 | GET | `/api/jobs/{id}` | job status |
 | GET | `/api/jobs/{id}/ply` | `reconstructed_scene.ply` (alias) |

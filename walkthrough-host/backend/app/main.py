@@ -31,7 +31,13 @@ app.add_middleware(
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     root = settings.lyra2_root.resolve()
-    return HealthResponse(lyra2_root_exists=root.is_dir(), lyra2_root=str(root))
+    data = settings.data_dir.resolve()
+    return HealthResponse(
+        lyra2_root_exists=root.is_dir(),
+        lyra2_root=str(root),
+        data_dir=str(data),
+        data_dir_exists=data.is_dir(),
+    )
 
 
 @app.post("/api/jobs", response_model=JobCreateResponse)
