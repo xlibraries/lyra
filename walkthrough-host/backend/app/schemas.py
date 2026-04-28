@@ -20,6 +20,8 @@ class JobPublic(BaseModel):
     error: str | None = None
     has_ply: bool = False
     has_preview_video: bool = False
+    # Filenames in job output/ (debug: spot missing PLY vs orphaned preview).
+    output_files: list[str] = Field(default_factory=list)
 
 
 class JobCreateResponse(BaseModel):

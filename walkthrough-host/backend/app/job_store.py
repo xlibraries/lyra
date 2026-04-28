@@ -29,10 +29,14 @@ class JobRecord:
         out = Path(job_dir) / "output"
         ply = out / "reconstructed_scene.ply"
         mp4 = out / "gs_trajectory.mp4"
+        output_files: list[str] = []
+        if out.is_dir():
+            output_files = sorted(p.name for p in out.iterdir() if p.is_file())
         d = asdict(self)
         d["status"] = self.status.value
         d["has_ply"] = ply.is_file()
         d["has_preview_video"] = mp4.is_file()
+        d["output_files"] = output_files
         d.pop("input_filename", None)
         d.pop("log_tail", None)
         d["created_at"] = datetime.fromisoformat(self.created_at)

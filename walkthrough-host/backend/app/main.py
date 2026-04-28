@@ -86,9 +86,20 @@ def _ply_file_response(job_id: str) -> FileResponse:
         raise HTTPException(404, "Job not found")
     if rec.status.value != "completed":
         raise HTTPException(409, "Job not completed")
-    ply = store.job_dir(job_id) / "output" / "reconstructed_scene.ply"
+    out_dir = store.job_dir(job_id) / "output"
+    ply = out_dir / "reconstructed_scene.ply"
     if not ply.is_file():
-        raise HTTPException(404, "PLY not found")
+        names = sorted(p.name for p in out_dir.iterdir() if p.is_file()) if out_dir.is_dir() else []
+        raise HTTPException(
+            404,
+            detail={
+                "error": "ply_missing",
+                "expected_path": str(ply.resolve()),
+                "output_files": names,
+                "hint": "Preview without PLY usually means reconstructed_scene.ply was deleted, the job "
+                "output was copied incompletely, or DATA_DIR points at a different tree than the worker used.",
+            },
+        )
     return FileResponse(
         path=ply,
         filename="reconstructed_scene.ply",

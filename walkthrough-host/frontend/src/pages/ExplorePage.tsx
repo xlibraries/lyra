@@ -60,7 +60,32 @@ export default function ExplorePage() {
       )}
 
       {job?.status === "completed" && !job.has_ply && (
-        <p style={{ opacity: 0.8 }}>No PLY for this job — only the preview video may be available.</p>
+        <div
+          style={{
+            padding: "0.85rem",
+            background: "#2a2210",
+            border: "1px solid #5c4d1a",
+            borderRadius: 8,
+            fontSize: "0.9rem",
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>No PLY on disk</strong> for this job, so the 3D viewer cannot load.{" "}
+          {job.has_preview_video ? (
+            <>
+              A flythrough <code>gs_trajectory.mp4</code> is present without <code>reconstructed_scene.ply</code> — usually
+              the PLY was deleted, the job folder was copied incompletely, or the API <code>DATA_DIR</code> does not match
+              where the worker wrote files. Re-run reconstruction (new upload) on the same host.
+            </>
+          ) : (
+            <>Only partial outputs may exist.</>
+          )}
+          {job.output_files && job.output_files.length > 0 && (
+            <div style={{ marginTop: "0.5rem", opacity: 0.9 }}>
+              Files in <code>output/</code>: <code>{job.output_files.join(", ")}</code>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

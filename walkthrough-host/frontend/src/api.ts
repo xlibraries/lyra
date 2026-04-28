@@ -16,6 +16,7 @@ export type Job = {
   error: string | null;
   has_ply: boolean;
   has_preview_video: boolean;
+  output_files?: string[];
 };
 
 export async function health(): Promise<{ ok: boolean; lyra2_root_exists: boolean; lyra2_root: string }> {

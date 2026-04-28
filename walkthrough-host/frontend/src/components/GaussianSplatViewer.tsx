@@ -69,8 +69,9 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
         if (cancelled) return;
 
         // progressiveLoad + dev-server proxy + huge PLY often stalls; full download is slower but more reliable.
+        // SceneFormat.Ply === 2; package typings omit SceneFormat on dynamic import.
         await viewer.addSplatScene(absolutePlyUrl, {
-          format: G.SceneFormat.Ply,
+          format: 2,
           splatAlphaRemovalThreshold: 5,
           showLoadingUI: true,
           progressiveLoad: false,
