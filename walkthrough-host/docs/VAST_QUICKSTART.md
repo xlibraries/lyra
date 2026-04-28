@@ -35,15 +35,18 @@ chmod +x vast_bootstrap.sh start_api.sh
 
 If bootstrap stopped at **`transformer_engine_torch`**, pull the latest `vast_bootstrap.sh` (or set `SKIP_TRANSFORMER_ENGINE=1`) and re-run the script — earlier steps are idempotent.
 
-**Resume manually** from the same shell after `conda activate lyra2` and the same `CUDA_HOME` / `LD_LIBRARY_PATH` / `CC` / `CXX` as in the script:
+**If FlashAttention failed to compile** (common on **Blackwell**): the walkthrough **`vipe_da3_gs_recon`** path does **not** use it. Pull the latest `vast_bootstrap.sh` (defaults to **`SKIP_FLASH_ATTN=1`**) and re-run the script, **or** resume from VIPE only:
 
 ```bash
 cd /root/lyra/Lyra-2
-MAX_JOBS=16 pip install --no-build-isolation --no-binary :all: "flash-attn==2.6.3"
+export PYTHONPATH=/root/lyra/Lyra-2
 USE_SYSTEM_EIGEN=1 pip install --no-build-isolation -e "lyra_2/_src/inference/vipe"
 pip install --no-build-isolation -e "lyra_2/_src/inference/depth_anything_3[gs]"
 pip install -r /root/lyra/walkthrough-host/backend/requirements.txt
+python -m lyra_2._src.inference.vipe_da3_gs_recon --help
 ```
+
+For **full Lyra 14B**, try a prebuilt wheel first: `SKIP_FLASH_ATTN=0` after editing the script to use `pip install flash-attn==2.6.3` (no `--no-binary :all:`), or install a newer `flash-attn` if your PyTorch/CUDA combo has wheels.
 
 Fix any error at the step it prints; then:
 

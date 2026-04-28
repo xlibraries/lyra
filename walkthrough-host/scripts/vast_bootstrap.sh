@@ -74,9 +74,19 @@ else
   ln -sf "$SITE/nvidia/cuda_runtime" "$SITE/nvidia/cudart" 2>/dev/null || true
 fi
 
-echo ">>> FlashAttention (slow — often 15–40+ min)"
-MAX_JOBS="${MAX_JOBS:-16}"
-pip install --no-build-isolation --no-binary :all: "flash-attn==2.6.3"
+# FlashAttention: source build often fails on very new GPUs (Blackwell) with Lyra's pinned 2.6.3.
+# Not imported by vipe_da3_gs_recon; required for Lyra 14B Wan (wan2pt1 / attention.py).
+SKIP_FLASH_ATTN="${SKIP_FLASH_ATTN:-1}"
+if [[ "$SKIP_FLASH_ATTN" == "1" ]]; then
+  echo ">>> Skipping FlashAttention (walkthrough / recon path). For full Lyra: SKIP_FLASH_ATTN=0 ./vast_bootstrap.sh"
+else
+  echo ">>> FlashAttention — try prebuilt wheel first"
+  if ! pip install --no-build-isolation "flash-attn==2.6.3"; then
+    echo ">>> Wheel unavailable; source build (slow, may fail on Blackwell)"
+    MAX_JOBS="${MAX_JOBS:-16}"
+    pip install --no-build-isolation --no-binary :all: "flash-attn==2.6.3" || die "FlashAttention install failed — set SKIP_FLASH_ATTN=1 for recon-only"
+  fi
+fi
 
 echo ">>> VIPE + Depth Anything 3 [gs]"
 USE_SYSTEM_EIGEN=1 pip install --no-build-isolation -e "lyra_2/_src/inference/vipe"
@@ -90,10 +100,14 @@ pip install -r "$HOST_BACKEND/requirements.txt"
 echo ">>> Verify imports (may warn)"
 export PYTHONPATH="$LYRA2_DIR"
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())" || true
-python -c "import flash_attn; print('flash_attn ok')" || die "flash_attn import failed"
+if [[ "$SKIP_FLASH_ATTN" != "1" ]]; then
+  python -c "import flash_attn; print('flash_attn ok')" || die "flash_attn import failed"
+fi
 if [[ "$SKIP_TRANSFORMER_ENGINE" != "1" ]]; then
   python -c "import transformer_engine.pytorch; print('te ok')" || true
 fi
+cd "$LYRA2_DIR"
+python -m lyra_2._src.inference.vipe_da3_gs_recon --help >/dev/null && echo ">>> vipe_da3_gs_recon CLI OK" || die "vipe_da3_gs_recon --help failed (fix VIPE/DA3 installs above)"
 
 echo ""
 echo "OK — Lyra env ready. Next:"
