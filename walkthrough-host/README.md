@@ -33,7 +33,7 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000.
 
-**Remote GPU + local UI:** run the API on the machine with the GPU (e.g. Vast), then on your Mac run `ssh … -L 8000:localhost:8000` and `walkthrough-host/scripts/mac_run_frontend.sh` (or `npm run dev` in `frontend/`). See [docs/VAST_QUICKSTART.md](./docs/VAST_QUICKSTART.md) §2.
+**Remote GPU + local UI:** run the API on the machine with the GPU (e.g. Vast), then on your Mac run `ssh … -L LOCAL:localhost:PORT` and `walkthrough-host/scripts/mac_run_frontend.sh`. If `LOCAL`/`PORT` are not 8000, set **`WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:LOCAL`** before `npm run dev` so Vite’s `/api` proxy hits your tunnel. See [docs/VAST_QUICKSTART.md](./docs/VAST_QUICKSTART.md) §2.
 
 ## End-to-end POC checklist
 

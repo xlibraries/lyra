@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run on your Mac. Uses Vite's /api → http://127.0.0.1:8000 proxy (see frontend/vite.config.ts).
-# Prerequisite: another terminal has an SSH tunnel to the GPU box, e.g.:
-#   ssh -p YOUR_PORT root@YOUR_VAST_HOST -L 8000:localhost:8000
-# And on Vast: ./walkthrough-host/scripts/start_api.sh (API on port 8000).
+# Run on your Mac. Vite proxies /api → WALKTHROUGH_PROXY_TARGET (default http://127.0.0.1:8000).
+# Match your SSH -L LOCAL:localhost:REMOTE to LOCAL and the API port on Vast (see start_api.sh PORT).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export WALKTHROUGH_PROXY_TARGET="${WALKTHROUGH_PROXY_TARGET:-http://127.0.0.1:8000}"
 cd "$ROOT/frontend"
 echo ">>> Lyra Walkthrough UI — open http://localhost:5173/"
-echo ">>> API must be reachable at http://127.0.0.1:8000 (SSH -L 8000:localhost:8000 to Vast)."
+echo ">>> Vite /api proxy → ${WALKTHROUGH_PROXY_TARGET}"
+echo ">>> If you use e.g. ssh -L 8080:localhost:8080, run: WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:8080 $0"
 exec npm run dev

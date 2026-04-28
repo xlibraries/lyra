@@ -82,17 +82,19 @@ ssh -p 29483 root@ssh6.vast.ai -L 8000:localhost:8000
 
 Keep this session open (or run SSH in the background with `-N`). Check: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health) should show `lyra2_root_exists: true`.
 
-**C — On your Mac** (another terminal): Vite proxies `/api` → `http://127.0.0.1:8000`, so the tunnel is enough—no `VITE_API_BASE` required:
+**C — On your Mac** (another terminal): Vite proxies `/api` to **`WALKTHROUGH_PROXY_TARGET`** (default `http://127.0.0.1:8000`). The **local** port must match your SSH `-L` (e.g. `-L 8080:localhost:8080` → set proxy to port **8080**).
 
 ```bash
 cd /path/to/lyra/walkthrough-host/scripts
 chmod +x mac_run_frontend.sh
 ./mac_run_frontend.sh
+# If tunnel is -L 8080:localhost:8080 and API listens on 8080 on Vast:
+# WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:8080 ./mac_run_frontend.sh
 ```
 
 Then open **http://localhost:5173/** in the browser (upload, poll jobs, 3D viewer).
 
-**Alternative:** `cd walkthrough-host/frontend && npm run dev` (same behavior). Or `VITE_API_BASE=http://127.0.0.1:8000 npm run dev` if you prefer absolute API URLs instead of the proxy.
+**Alternative:** `cd walkthrough-host/frontend && npm run dev` (same default proxy). Or `VITE_API_BASE=http://127.0.0.1:8080 npm run dev` to bypass the proxy and call the API directly.
 
 **Production-style:** build with empty `VITE_API_BASE` and set `LYRA_WALKTHROUGH_STATIC` on the server (see main README).
 

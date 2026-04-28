@@ -29,6 +29,23 @@ export default function ExplorePage() {
         )}
       </div>
 
+      {!loadErr && !job && (
+        <p style={{ opacity: 0.85 }}>Loading job… If this hangs, the UI cannot reach the API (check Vite proxy port matches your SSH tunnel, e.g. <code>WALKTHROUGH_PROXY_TARGET=http://127.0.0.1:8080</code>).</p>
+      )}
+
+      {job?.status === "processing" && (
+        <p style={{ opacity: 0.85 }}>Reconstruction still running — preview and 3D viewer appear when the job completes.</p>
+      )}
+
+      {job?.status === "failed" && (
+        <div style={{ color: "#f88", padding: "0.75rem", background: "#2a1515", borderRadius: 8 }}>
+          <strong>Job failed</strong>
+          {job.error && (
+            <pre style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap", fontSize: "0.85rem" }}>{job.error}</pre>
+          )}
+        </div>
+      )}
+
       {loadErr && (
         <div style={{ color: "#f88", padding: "0.75rem", background: "#2a1515", borderRadius: 8 }}>
           <strong>Job</strong>: {loadErr}
