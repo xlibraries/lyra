@@ -33,6 +33,8 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000.
 
+**Remote GPU + local UI:** run the API on the machine with the GPU (e.g. Vast), then on your Mac run `ssh … -L 8000:localhost:8000` and `walkthrough-host/scripts/mac_run_frontend.sh` (or `npm run dev` in `frontend/`). See [docs/VAST_QUICKSTART.md](./docs/VAST_QUICKSTART.md) §2.
+
 ## End-to-end POC checklist
 
 1. **Lyra-2 + weights:** `PYTHONPATH` points at `Lyra-2/`; DA3 recon checkpoint exists (e.g. `checkpoints/recon/model.pt` from Hugging Face `nvidia/Lyra-2.0`).

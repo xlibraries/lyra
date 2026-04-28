@@ -59,9 +59,11 @@ Fix any error at the step it prints; then:
 hf download nvidia/Lyra-2.0 --include "checkpoints/recon/*" --local-dir /root/lyra/Lyra-2
 ```
 
-## 2. Run API + tunnel from Mac
+## 2. Split dev: API on Vast, UI on Mac (recommended POC)
 
-**On GPU:**
+You do **not** need two Cursor agents—use **two terminals on your Mac** plus **one SSH session** (the SSH can be the same terminal that holds the tunnel).
+
+**A — On the GPU instance** (SSH into Vast, then):
 
 ```bash
 cd /root/lyra/walkthrough-host/scripts
@@ -70,24 +72,29 @@ export DATA_DIR=/root/lyra/walkthrough-host/data
 ./start_api.sh
 ```
 
-**On Mac** (adjust port and Vast SSH flags):
+Leave that running.
+
+**B — On your Mac** (new terminal): forward remote port 8000 to local 8000. Adjust `-p` and host to your provider.
 
 ```bash
 ssh -p 29483 root@ssh6.vast.ai -L 8000:localhost:8000
 ```
 
-Open `http://127.0.0.1:8000/api/health` — `lyra2_root_exists` should be true.
+Keep this session open (or run SSH in the background with `-N`). Check: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health) should show `lyra2_root_exists: true`.
 
-## 3. Frontend (optional, on Mac)
-
-Point Vite at the tunnel:
+**C — On your Mac** (another terminal): Vite proxies `/api` → `http://127.0.0.1:8000`, so the tunnel is enough—no `VITE_API_BASE` required:
 
 ```bash
-cd walkthrough-host/frontend
-VITE_API_BASE=http://127.0.0.1:8000 npm run dev
+cd /path/to/lyra/walkthrough-host/scripts
+chmod +x mac_run_frontend.sh
+./mac_run_frontend.sh
 ```
 
-Or build with empty `VITE_API_BASE` and set `LYRA_WALKTHROUGH_STATIC` on the server (see main README).
+Then open **http://localhost:5173/** in the browser (upload, poll jobs, 3D viewer).
+
+**Alternative:** `cd walkthrough-host/frontend && npm run dev` (same behavior). Or `VITE_API_BASE=http://127.0.0.1:8000 npm run dev` if you prefer absolute API URLs instead of the proxy.
+
+**Production-style:** build with empty `VITE_API_BASE` and set `LYRA_WALKTHROUGH_STATIC` on the server (see main README).
 
 ## 4. If you are time-limited
 
