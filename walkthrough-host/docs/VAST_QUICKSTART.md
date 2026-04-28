@@ -34,7 +34,7 @@ Fix any error at the step it prints; then:
 
 ```bash
 # HuggingFace weights (needs `pip install huggingface_hub` and optionally `huggingface-cli login`)
-huggingface-cli download nvidia/Lyra-2.0 --include "checkpoints/recon/*" --local-dir /root/lyra/Lyra-2
+hf download nvidia/Lyra-2.0 --include "checkpoints/recon/*" --local-dir /root/lyra/Lyra-2
 ```
 
 ## 2. Run API + tunnel from Mac

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Run ON the Linux GPU instance (e.g. Vast.ai). Installs Miniconda + Lyra-2 per upstream INSTALL.md
 # and walkthrough-host backend. Not fully non-interactive if conda init required.
-set -euo pipefail
+# Do not use `set -u`: conda gcc/gxx deactivate hooks reference unset CONDA_BACKUP_CXX.
+set -eo pipefail
 
 LYRA_ROOT="${LYRA_ROOT:-$HOME/lyra}"
 LYRA2_DIR="${LYRA2_DIR:-$LYRA_ROOT/Lyra-2}"
@@ -35,6 +36,7 @@ if ! conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
   conda create -n "$ENV_NAME" python=3.10 pip cmake ninja libgl ffmpeg packaging -c conda-forge -y
 fi
 conda activate "$ENV_NAME"
+export CONDA_BACKUP_CXX="${CONDA_BACKUP_CXX:-}"
 
 echo ">>> Toolchain (gcc 13)"
 CONDA_BACKUP_CXX="" conda install gcc=13.3.0 gxx=13.3.0 eigen zlib -c conda-forge -y
@@ -44,7 +46,7 @@ conda install cuda -c nvidia/label/cuda-12.8.0 -y
 export CUDA_HOME="$CONDA_PREFIX"
 
 echo ">>> PyTorch cu128"
-pip install -q torch==2.7.1 torchvision==0.22.1 --extra-index-url https://download.pytorch.org/whl/cu128
+pip install torch==2.7.1 torchvision==0.22.1 --extra-index-url https://download.pytorch.org/whl/cu128
 
 SITE="$CONDA_PREFIX/lib/python3.10/site-packages"
 export CPATH="$CUDA_HOME/include:$SITE/nvidia/cudnn/include:$SITE/nvidia/nccl/include:${CPATH:-}"
@@ -70,13 +72,13 @@ MAX_JOBS="${MAX_JOBS:-16}"
 pip install --no-build-isolation --no-binary :all: "flash-attn==2.6.3"
 
 echo ">>> VIPE + Depth Anything 3 [gs]"
-USE_SYSTEM_EIGEN=1 pip install -q --no-build-isolation -e "lyra_2/_src/inference/vipe"
-pip install -q --no-build-isolation -e "lyra_2/_src/inference/depth_anything_3[gs]"
+USE_SYSTEM_EIGEN=1 pip install --no-build-isolation -e "lyra_2/_src/inference/vipe"
+pip install --no-build-isolation -e "lyra_2/_src/inference/depth_anything_3[gs]"
 
 echo ">>> Walkthrough-host backend"
 HOST_BACKEND="$LYRA_ROOT/walkthrough-host/backend"
 [[ -d "$HOST_BACKEND" ]] || die "walkthrough-host/backend missing at $HOST_BACKEND"
-pip install -q -r "$HOST_BACKEND/requirements.txt"
+pip install -r "$HOST_BACKEND/requirements.txt"
 
 echo ">>> Verify imports (may warn)"
 export PYTHONPATH="$LYRA2_DIR"
