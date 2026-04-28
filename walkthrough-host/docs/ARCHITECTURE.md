@@ -68,6 +68,8 @@ flowchart LR
 - **Dockerfile** based on an NVIDIA CUDA + PyTorch image; document that operators still run Lyra’s full install inside the image build or mount a prebuilt conda env.
 - **docker-compose.yml**: service `walkthrough` with `deploy.resources.reservations.devices` for GPU; volume mounts for `Lyra-2`, checkpoints, and `DATA_DIR`.
 
+Parallel agents should follow [MULTI_AGENT.md](./MULTI_AGENT.md) so lanes (Lyra core vs host app) do not conflict.
+
 ## Security notes (self-hosted)
 
 - No auth in v1; deploy behind VPN or reverse proxy with authentication if exposed.

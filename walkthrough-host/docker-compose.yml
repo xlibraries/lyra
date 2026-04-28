@@ -1,0 +1,35 @@
+# Lyra Walkthrough Host — optional compose layout.
+#
+# Reconstruction requires the full Lyra-2 Python stack on the SAME machine as uvicorn.
+# Typical production: run uvicorn with your conda "lyra2" interpreter (see README), not this slim image.
+#
+# Usage (API only, from walkthrough-host/):
+#   docker compose build
+#   docker compose run --rm -e LYRA2_ROOT=/lyra/Lyra-2 -v ../Lyra-2:/lyra/Lyra-2:ro -v ./data:/data -p 8000:8000 api
+#
+# GPU (Linux + NVIDIA Container Toolkit): uncomment the deploy section on `api`.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      LYRA2_ROOT: /lyra/Lyra-2
+      DATA_DIR: /data
+      # Optional: serve built UI from same origin (build frontend first: npm run build)
+      # LYRA_WALKTHROUGH_STATIC: /static
+      # PYTHON_BIN: /opt/conda/envs/lyra2/bin/python
+    volumes:
+      - ../Lyra-2:/lyra/Lyra-2:ro
+      - ./data:/data
+      # - ./frontend/dist:/static:ro
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import cors_origins_list, get_settings
 from app.job_store import JobStore
@@ -112,3 +114,17 @@ def job_log(job_id: str):
     if rec is None:
         raise HTTPException(404, "Job not found")
     return JSONResponse({"log": rec.log_tail or ""})
+
+
+def _mount_static_spa(application: FastAPI) -> None:
+    """Optional single-origin deploy: set LYRA_WALKTHROUGH_STATIC to frontend dist/."""
+    raw = os.environ.get("LYRA_WALKTHROUGH_STATIC")
+    if not raw:
+        return
+    root = Path(raw).expanduser().resolve()
+    if not root.is_dir():
+        return
+    application.mount("/", StaticFiles(directory=str(root), html=True), name="spa")
+
+
+_mount_static_spa(app)
