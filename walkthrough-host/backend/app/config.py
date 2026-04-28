@@ -12,7 +12,12 @@ class Settings(BaseSettings):
     python_bin: str | None = None
     da3_model_path: str | None = None
     max_frames: int = 0
-    da3_max_frames: int = 128
+    # After VIPE/SLAM, DA3 nested-giant forward is VRAM-heavy; 128 views + full-res often OOMs on ~96GB.
+    da3_max_frames: int = 48
+    # Short-side cap for DA3 (see vipe_da3_gs_recon --max_resolution). 0 = omit flag = full resolution (highest OOM risk).
+    da3_max_resolution: int = 0
+    # GS trajectory MP4: GPU→CPU batch size (see vipe_da3_gs_recon --render_video_gpu_batch). Lower = less peak VRAM.
+    render_video_gpu_batch: int = 16
     upload_max_mb: int = 2048
     cors_origins: str = "http://127.0.0.1:5173,http://localhost:5173"
 

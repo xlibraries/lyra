@@ -16,7 +16,9 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import os
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -478,6 +480,47 @@ def _save_video_mp4(video_path: str, frames_thwc: np.ndarray, fps: float) -> Non
         clip.close()
 
 
+def _save_video_mp4_from_torch_batched(
+    video_path: str,
+    frames_tchw: torch.Tensor,
+    fps: float,
+    *,
+    gpu_transfer_batch: int,
+) -> None:
+    """Write MP4 from a (T,3,H,W) float tensor without holding all frames on CPU at once."""
+    if frames_tchw.ndim != 4 or int(frames_tchw.shape[1]) != 3:
+        raise ValueError(
+            f"Expected frames shape (T,3,H,W), got {tuple(frames_tchw.shape)}"
+        )
+    t = int(frames_tchw.shape[0])
+    if t == 0:
+        raise ValueError("No frames to save.")
+    _, _, h, w = (int(frames_tchw.shape[i]) for i in range(4))
+    bsz = max(1, int(gpu_transfer_batch))
+
+    parent = os.path.dirname(video_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(str(video_path), fourcc, float(max(fps, 1.0)), (w, h))
+    if not writer.isOpened():
+        raise RuntimeError(f"OpenCV VideoWriter failed to open: {video_path}")
+
+    try:
+        for i in range(0, t, bsz):
+            batch = frames_tchw[i : i + bsz]
+            rgb_u8 = (
+                batch.clamp(0.0, 1.0).mul(255.0).byte().permute(0, 2, 3, 1).contiguous()
+            )
+            cpu = rgb_u8.cpu().numpy()
+            for fi in range(cpu.shape[0]):
+                writer.write(cv2.cvtColor(cpu[fi], cv2.COLOR_RGB2BGR))
+            del batch, rgb_u8, cpu
+    finally:
+        writer.release()
+
+
 def _collect_vipe_images(
     video_path: str,
     vipe_stride: int,
@@ -599,6 +642,12 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--render_fps", type=float, default=None)
     parser.add_argument("--render_chunk_size", type=int, default=1)
+    parser.add_argument(
+        "--render_video_gpu_batch",
+        type=int,
+        default=16,
+        help="Frames per GPU->CPU batch when writing gs_trajectory.mp4 (lower uses less peak VRAM).",
+    )
 
     return parser.parse_args()
 
@@ -623,6 +672,73 @@ def main() -> None:
     print(f"[vipe_da3_gs] Output dir:  {output_dir}")
     print(f"[vipe_da3_gs] Device:      {device}")
 
+    skip_vipe = bool(args.no_vipe)
+    is_vipe_child = os.environ.get("LYRA_RECON_VIPE_SUBPROC_CHILD") == "1"
+    # VIPE/SLAM often keeps tens of GB in the CUDA allocator after `del vipe`; a child process is the reliable release.
+    vipe_subprocess_isolate = not skip_vipe and device.type == "cuda" and not is_vipe_child
+
+    if is_vipe_child:
+        if skip_vipe:
+            raise RuntimeError("LYRA_RECON_VIPE_SUBPROC_CHILD set with --no_vipe")
+        VIPE = _import_vipe_class()
+        print("[vipe_da3_gs] VIPE subprocess: reading video frames…")
+        images_all, indices_all, fps = _collect_vipe_images(
+            str(input_video),
+            vipe_stride=1,
+            max_frames=args.max_frames,
+            max_views=0,
+        )
+        if not images_all:
+            raise RuntimeError("No frames read from video.")
+        indices_da3_rel = _uniform_subsample_indices(len(images_all), args.da3_max_frames)
+        if not indices_da3_rel:
+            raise RuntimeError("No frames selected for DA3.")
+        indices_da3 = [indices_all[idx] for idx in indices_da3_rel]
+        eff_fps = float(fps)
+        frames_np = np.stack(images_all, axis=0).astype(np.float32) / 255.0
+        frames_thwc = torch.from_numpy(frames_np).contiguous().clone()
+        del images_all, frames_np
+        with tempfile.TemporaryDirectory(prefix="vipe_da3_gs_") as tmpdir:
+            vipe_output_path = Path(tmpdir) / "vipe_out"
+            vipe_output_path.mkdir(parents=True, exist_ok=True)
+            vipe_overrides = args.vipe_overrides or _vipe_default_overrides(vipe_output_path)
+            print("[vipe_da3_gs] VIPE subprocess: running VIPE/SLAM…")
+            vipe_kwargs = {"fast_mode": not bool(args.vipe_full_mode)}
+            vipe = VIPE(vipe_overrides, **vipe_kwargs)
+            vipe_out = vipe.infer_frames(frames_thwc, fps=eff_fps, name=input_video.stem)
+            c2w = vipe_out.extrinsics_c2w.to(dtype=torch.float32)
+            w2c = torch.linalg.inv(c2w)
+            intrinsics_vipe = _intrinsics_vec_to_k33(vipe_out.intrinsics.to(dtype=torch.float32))
+            w2c_np_vipe_full = w2c.cpu().numpy().astype(np.float32)
+            k_np_vipe_full = intrinsics_vipe.cpu().numpy().astype(np.float32)
+            w2c_np_da3 = w2c_np_vipe_full[indices_da3_rel]
+            k_np_da3 = k_np_vipe_full[indices_da3_rel]
+            np.savez(
+                output_dir / "vipe_predictions.npz",
+                frame_ids=vipe_out.frame_ids.cpu().numpy().astype(np.int64),
+                w2c_vipe=w2c_np_vipe_full,
+                intrinsics_vipe=k_np_vipe_full,
+                w2c_da3=w2c_np_da3,
+                intrinsics_da3=k_np_da3,
+                indices_vipe=np.asarray(indices_all, dtype=np.int64),
+                indices_da3=np.asarray(indices_da3, dtype=np.int64),
+                fps=np.asarray([eff_fps], dtype=np.float32),
+                input_video_path=np.asarray([str(input_video)]),
+            )
+        print("[vipe_da3_gs] VIPE subprocess: wrote vipe_predictions.npz — exiting.")
+        return
+
+    if vipe_subprocess_isolate:
+        print("[vipe_da3_gs] Spawning VIPE in a child process (frees GPU before DA3)…")
+        env = {**os.environ, "LYRA_RECON_VIPE_SUBPROC_CHILD": "1"}
+        proc = subprocess.run(
+            [sys.executable, "-m", "lyra_2._src.inference.vipe_da3_gs_recon", *sys.argv[1:]],
+            env=env,
+            cwd=str(REPO_ROOT),
+        )
+        if proc.returncode != 0:
+            sys.exit(proc.returncode)
+
     da3_model_path_custom = None
     if args.da3_model_path_custom:
         da3_model_path_custom = str(Path(args.da3_model_path_custom).expanduser().resolve())
@@ -630,18 +746,10 @@ def main() -> None:
             raise FileNotFoundError(f"DA3 checkpoint not found: {da3_model_path_custom}")
         print(f"[vipe_da3_gs] DA3 ckpt:    {da3_model_path_custom}")
 
-    print("[vipe_da3_gs] Loading DA3 model...")
-    da3_model = load_da3_model(
-        da3_model_name=args.da3_model_name,
-        da3_model_path_custom=da3_model_path_custom,
-        device=str(device),
-    )
-    da3_model.eval()
-
-    skip_vipe = bool(args.no_vipe)
-
-    if not skip_vipe:
+    if not skip_vipe and not vipe_subprocess_isolate:
         VIPE = _import_vipe_class()
+
+    da3_model = None
 
     print("[vipe_da3_gs] Reading video frames...")
     images_all, indices_all, fps = _collect_vipe_images(
@@ -671,12 +779,19 @@ def main() -> None:
         k_np_vipe_full = None
         w2c_np_da3 = None
         k_np_da3 = None
+    elif vipe_subprocess_isolate:
+        z = np.load(output_dir / "vipe_predictions.npz")
+        w2c_np_vipe_full = np.asarray(z["w2c_vipe"], dtype=np.float32)
+        k_np_vipe_full = np.asarray(z["intrinsics_vipe"], dtype=np.float32)
+        w2c_np_da3 = np.asarray(z["w2c_da3"], dtype=np.float32)
+        k_np_da3 = np.asarray(z["intrinsics_da3"], dtype=np.float32)
+        frames_thwc = None  # unused
     else:
         frames_np = np.stack(images_all, axis=0).astype(np.float32) / 255.0
         frames_thwc = torch.from_numpy(frames_np).contiguous()
 
     with tempfile.TemporaryDirectory(prefix="vipe_da3_gs_") as tmpdir:
-        if not skip_vipe:
+        if not skip_vipe and not vipe_subprocess_isolate:
             vipe_output_path = Path(tmpdir) / "vipe_out"
             vipe_output_path.mkdir(parents=True, exist_ok=True)
             vipe_overrides = args.vipe_overrides or _vipe_default_overrides(
@@ -711,6 +826,21 @@ def main() -> None:
                 fps=np.asarray([eff_fps], dtype=np.float32),
                 input_video_path=np.asarray([str(input_video)]),
             )
+
+            del vipe, vipe_out, c2w, w2c, intrinsics_vipe, frames_thwc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            print("[vipe_da3_gs] Released VIPE GPU memory; loading DA3…")
+
+        if da3_model is None:
+            print("[vipe_da3_gs] Loading DA3 model...")
+            da3_model = load_da3_model(
+                da3_model_name=args.da3_model_name,
+                da3_model_path_custom=da3_model_path_custom,
+                device=str(device),
+            )
+            da3_model.eval()
 
         if args.da3_process_res is not None:
             da3_process_res = int(args.da3_process_res)
@@ -896,14 +1026,20 @@ def main() -> None:
             enable_tqdm=True,
         )
 
-        frames_render = (
-            color[0].clamp(0.0, 1.0).mul(255.0).byte().permute(0, 2, 3, 1).cpu().numpy()
-        )
+        del depth
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         video_path = output_dir / "gs_trajectory.mp4"
-        _save_video_mp4(str(video_path), frames_render, fps=render_fps)
+        _save_video_mp4_from_torch_batched(
+            str(video_path),
+            color[0],
+            fps=render_fps,
+            gpu_transfer_batch=int(args.render_video_gpu_batch),
+        )
         print(f"[vipe_da3_gs] Saved GS render video to {video_path}")
 
-        del gaussians, render_extr, render_intr, color, depth, frames_render
+        del gaussians, render_extr, render_intr, color
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 

@@ -26,6 +26,9 @@ def _build_command(settings: Settings, input_video: Path, output_dir: Path) -> l
     if settings.max_frames > 0:
         cmd.extend(["--max_frames", str(settings.max_frames)])
     cmd.extend(["--da3_max_frames", str(settings.da3_max_frames)])
+    if settings.da3_max_resolution > 0:
+        cmd.extend(["--max_resolution", str(settings.da3_max_resolution)])
+    cmd.extend(["--render_video_gpu_batch", str(settings.render_video_gpu_batch)])
     if settings.da3_model_path:
         p = Path(settings.da3_model_path).expanduser().resolve()
         if p.is_file():
@@ -47,6 +50,10 @@ def run_reconstruction_job(job_id: str, settings: Settings, store: JobStore) -> 
     cmd = _build_command(settings, input_video, output_dir)
     env = dict(**os.environ)
     env["PYTHONPATH"] = str(settings.lyra2_root.resolve())
+    env.setdefault(
+        "PYTORCH_CUDA_ALLOC_CONF",
+        os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True"),
+    )
 
     try:
         proc = subprocess.run(
