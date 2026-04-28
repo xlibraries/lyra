@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createJob, getJob, health, type Job } from "../api";
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [backend, setBackend] = useState<string | null>(null);
+  const [openJobId, setOpenJobId] = useState("");
 
   useEffect(() => {
     health()
@@ -59,6 +61,48 @@ export default function HomePage() {
       </p>
       <p style={{ fontSize: "0.9rem", opacity: 0.7 }}>{backend}</p>
 
+      <div
+        style={{
+          marginTop: "1.25rem",
+          padding: "1rem",
+          background: "#12141a",
+          borderRadius: 8,
+          border: "1px solid #252830",
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>3D Gaussian viewer</div>
+        <p style={{ margin: 0, opacity: 0.85, fontSize: "0.9rem" }}>
+          Open an existing completed job (interactive splat + preview video).
+        </p>
+        <form
+          style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const t = openJobId.trim();
+            if (t) navigate(`/explore/${t}`);
+          }}
+        >
+          <input
+            value={openJobId}
+            onChange={(e) => setOpenJobId(e.target.value)}
+            placeholder="Job UUID"
+            style={{
+              flex: 1,
+              minWidth: 200,
+              padding: "0.45rem 0.6rem",
+              borderRadius: 6,
+              border: "1px solid #353945",
+              background: "#0c0d10",
+              color: "#e8eaed",
+            }}
+          />
+          <button type="submit">Open</button>
+          <Link to="/viewer" style={{ alignSelf: "center", fontSize: "0.9rem" }}>
+            Full page →
+          </Link>
+        </form>
+      </div>
+
       <form onSubmit={onSubmit} style={{ marginTop: "1.5rem" }}>
         <input
           type="file"
@@ -89,9 +133,11 @@ export default function HomePage() {
               {job.error}
             </pre>
           )}
-          {job.status === "completed" && job.has_ply && (
+          {job.status === "completed" && (job.has_ply || job.has_preview_video) && (
             <p style={{ marginTop: "1rem" }}>
-              <Link to={`/explore/${job.id}`}>Open walkable view →</Link>
+              <Link to={`/explore/${job.id}`} style={{ fontWeight: 600 }}>
+                Open 3D Gaussian viewer →
+              </Link>
             </p>
           )}
         </div>

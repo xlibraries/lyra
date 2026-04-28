@@ -44,6 +44,8 @@ CONDA_BACKUP_CXX="" conda install gcc=13.3.0 gxx=13.3.0 eigen zlib -c conda-forg
 echo ">>> CUDA toolkit in conda (12.8)"
 conda install cuda -c nvidia/label/cuda-12.8.0 -y
 export CUDA_HOME="$CONDA_PREFIX"
+# Prefer conda nvcc (matches PyTorch cu128). System CUDA (e.g. 13.x on hosts) breaks gsplat wheels/source builds.
+export PATH="$CONDA_PREFIX/bin:${PATH:-}"
 
 echo ">>> PyTorch cu128"
 pip install torch==2.7.1 torchvision==0.22.1 --extra-index-url https://download.pytorch.org/whl/cu128
@@ -61,8 +63,8 @@ fi
 
 echo ">>> Lyra requirements (no-deps batch — see Lyra-2/INSTALL.md)"
 pip install --no-deps -r requirements.txt
-# hatchling is listed but --no-deps omits its runtime deps; DA3 editable build needs pathspec.
-pip install pathspec
+# hatchling is listed but --no-deps omits its runtime deps; DA3 editable build needs these.
+pip install pathspec pluggy trove-classifiers
 pip install "git+https://github.com/microsoft/MoGe.git"
 
 # Transformer Engine often fails to build from source on brand-new architectures (e.g. Blackwell).
@@ -92,6 +94,46 @@ fi
 
 echo ">>> VIPE + Depth Anything 3 [gs]"
 USE_SYSTEM_EIGEN=1 pip install --no-build-isolation -e "lyra_2/_src/inference/vipe"
+
+# gdown>=6 removed `fuzzy=`; upstream VIPE still passes fuzzy=True (TypeError on fresh installs).
+_patch_vipe_droid_gdown() {
+  local f="$LYRA2_DIR/lyra_2/_src/inference/vipe/vipe/slam/networks/droid_net.py"
+  [[ -f "$f" ]] || return 0
+  # Already patched (url + try/except) or upstream fixed.
+  if grep -q 'url = "https://drive.google.com/file/d/1PpqVt1H4maBa_GbPJp4NwxRsd9jk-elh/view"' "$f" 2>/dev/null; then
+    return 0
+  fi
+  if ! grep -q "fuzzy=True" "$f" 2>/dev/null; then
+    return 0
+  fi
+  echo ">>> Patching VIPE droid_net.py for gdown>=6 (DroidSLAM checkpoint download)"
+  export _LYRA_DROID_NET_PY="$f"
+  python3 <<'PY'
+from pathlib import Path
+import os
+
+path = Path(os.environ["_LYRA_DROID_NET_PY"])
+text = path.read_text()
+old = """            gdown.download(
+                \"https://drive.google.com/file/d/1PpqVt1H4maBa_GbPJp4NwxRsd9jk-elh/view\",
+                output=str(ckpt_path),
+                fuzzy=True,
+            )"""
+new = """            url = \"https://drive.google.com/file/d/1PpqVt1H4maBa_GbPJp4NwxRsd9jk-elh/view\"
+            try:
+                gdown.download(url, output=str(ckpt_path), fuzzy=True)
+            except TypeError:
+                # gdown>=6 removed `fuzzy` (share-link id extraction is always on).
+                gdown.download(url, output=str(ckpt_path))"""
+if old not in text:
+    raise SystemExit("patch: expected block not found (VIPE updated?) — edit droid_net.py manually")
+path.write_text(text.replace(old, new, 1))
+print("patch: ok")
+PY
+}
+_patch_vipe_droid_gdown
+unset _LYRA_DROID_NET_PY
+
 pip install --no-build-isolation -e "lyra_2/_src/inference/depth_anything_3[gs]"
 
 echo ">>> Walkthrough-host backend"

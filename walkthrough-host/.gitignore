@@ -1,5 +1,6 @@
 data/jobs/*
 !data/jobs/.gitkeep
+data/flam360_autonomous_run/
 backend/.env
 frontend/node_modules/
 frontend/dist/

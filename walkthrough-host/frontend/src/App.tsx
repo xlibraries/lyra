@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
+import ViewerGatePage from "./pages/ViewerGatePage";
 
 export default function App() {
   return (
@@ -23,6 +24,12 @@ export default function App() {
           >
             Upload
           </NavLink>
+          <NavLink
+            to="/viewer"
+            style={({ isActive }) => ({ opacity: isActive ? 1 : 0.7, textDecoration: "none" })}
+          >
+            3D viewer
+          </NavLink>
         </nav>
         <span style={{ marginLeft: "auto", fontSize: "0.85rem", opacity: 0.6 }}>
           Video → VIPE + DA3 → Gaussian splat (Lyra-2)
@@ -31,6 +38,7 @@ export default function App() {
       <main style={{ flex: 1, padding: "1.5rem" }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/viewer" element={<ViewerGatePage />} />
           <Route path="/explore/:jobId" element={<ExplorePage />} />
         </Routes>
       </main>

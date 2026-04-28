@@ -33,6 +33,8 @@ chmod +x vast_bootstrap.sh start_api.sh
 # SKIP_TRANSFORMER_ENGINE=0 ./vast_bootstrap.sh
 ```
 
+The script **patches VIPE** `droid_net.py` after the editable install when upstream still passes `gdown.download(..., fuzzy=True)` (incompatible with **gdown ≥ 6**). If the patch step reports “expected block not found”, your submodule may already be fixed — open an issue with the file snippet.
+
 If bootstrap stopped at **`transformer_engine_torch`**, pull the latest `vast_bootstrap.sh` (or set `SKIP_TRANSFORMER_ENGINE=1`) and re-run the script — earlier steps are idempotent.
 
 **If FlashAttention failed to compile** (common on **Blackwell**): the walkthrough **`vipe_da3_gs_recon`** path does **not** use it. Pull the latest `vast_bootstrap.sh` (defaults to **`SKIP_FLASH_ATTN=1`**) and re-run the script, **or** resume from VIPE only:

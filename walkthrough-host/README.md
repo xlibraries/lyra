@@ -33,6 +33,15 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. The Vite dev server proxies `/api` to port 8000.
 
+## End-to-end POC checklist
+
+1. **Lyra-2 + weights:** `PYTHONPATH` points at `Lyra-2/`; DA3 recon checkpoint exists (e.g. `checkpoints/recon/model.pt` from Hugging Face `nvidia/Lyra-2.0`).
+2. **Backend:** `cd walkthrough-host/backend && cp .env.example .env` — set `LYRA2_ROOT`, optional `PYTHON_BIN`, `DA3_MODEL_PATH`, `RENDER_VIDEO_GPU_BATCH` (lower if GS video encode OOMs).
+3. **Run API:** `../scripts/start_api.sh` or `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+4. **Health:** `GET /api/health` → `lyra2_root_exists: true`.
+5. **UI:** `npm run dev` in `frontend/`, upload an MP4, wait for **completed**, open **3D viewer** (PLY + optional `gs_trajectory.mp4` preview).
+6. **Remote GPU:** `docs/VAST_QUICKSTART.md` — `vast_bootstrap.sh` installs deps and applies the VIPE `gdown` compatibility patch after editable VIPE install.
+
 ## Single-origin production (optional)
 
 Build the UI, then serve it from FastAPI:
