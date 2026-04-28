@@ -35,15 +35,10 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
       try {
         const absolutePlyUrl = toAbsoluteAssetUrl(plyUrl);
 
+        // Do not treat HEAD failures as fatal: some proxies/tunnels return 404 for HEAD while GET works.
         let headNote = "";
         try {
           const head = await fetch(absolutePlyUrl, { method: "HEAD" });
-          if (head.status === 409) {
-            throw new Error("PLY not ready (job not completed or still processing).");
-          }
-          if (head.status === 404) {
-            throw new Error("PLY not found.");
-          }
           if (head.ok) {
             const n = head.headers.get("content-length");
             if (n) {
@@ -51,11 +46,8 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
               headNote = mb > 0.5 ? ` (~${mb.toFixed(1)} MB — can take a minute over SSH)` : "";
             }
           }
-        } catch (e) {
-          if (e instanceof Error && (e.message.startsWith("PLY ") || e.message.includes("not ready"))) {
-            throw e;
-          }
-          /* 405 / network: skip size hint */
+        } catch {
+          /* ignore — loader will GET the PLY */
         }
         if (cancelled) return;
         if (headNote) setLoadHint(headNote);
