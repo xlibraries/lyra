@@ -5,6 +5,13 @@ type Props = {
   plyUrl: string;
 };
 
+function toAbsoluteAssetUrl(relativeOrAbsolute: string): string {
+  if (relativeOrAbsolute.startsWith("http://") || relativeOrAbsolute.startsWith("https://")) {
+    return relativeOrAbsolute;
+  }
+  return new URL(relativeOrAbsolute, window.location.origin).href;
+}
+
 /**
  * Embeds @mkkellogg/gaussian-splats-3d Viewer. Requires `rootElement` (not `self`).
  */
@@ -13,6 +20,7 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
   const viewerRef = useRef<{ dispose?: () => void; stop?: () => void } | null>(null);
   const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [loadHint, setLoadHint] = useState<string | null>(null);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -21,9 +29,37 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
     let cancelled = false;
     setPhase("loading");
     setErrMsg(null);
+    setLoadHint(null);
 
     (async () => {
       try {
+        const absolutePlyUrl = toAbsoluteAssetUrl(plyUrl);
+
+        let headNote = "";
+        try {
+          const head = await fetch(absolutePlyUrl, { method: "HEAD" });
+          if (head.status === 409) {
+            throw new Error("PLY not ready (job not completed or still processing).");
+          }
+          if (head.status === 404) {
+            throw new Error("PLY not found.");
+          }
+          if (head.ok) {
+            const n = head.headers.get("content-length");
+            if (n) {
+              const mb = Number(n) / (1024 * 1024);
+              headNote = mb > 0.5 ? ` (~${mb.toFixed(1)} MB — can take a minute over SSH)` : "";
+            }
+          }
+        } catch (e) {
+          if (e instanceof Error && (e.message.startsWith("PLY ") || e.message.includes("not ready"))) {
+            throw e;
+          }
+          /* 405 / network: skip size hint */
+        }
+        if (cancelled) return;
+        if (headNote) setLoadHint(headNote);
+
         const G = await import("@mkkellogg/gaussian-splats-3d");
         if (cancelled) return;
 
@@ -40,10 +76,12 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
         await viewer.init();
         if (cancelled) return;
 
-        await viewer.addSplatScene(plyUrl, {
+        // progressiveLoad + dev-server proxy + huge PLY often stalls; full download is slower but more reliable.
+        await viewer.addSplatScene(absolutePlyUrl, {
+          format: G.SceneFormat.Ply,
           splatAlphaRemovalThreshold: 5,
           showLoadingUI: true,
-          progressiveLoad: true,
+          progressiveLoad: false,
           position: [0, 0, 0],
           rotation: [0, 0, 0, 1],
           scale: [1, 1, 1],
@@ -52,6 +90,7 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
 
         viewer.start();
         setPhase("ready");
+        setLoadHint(null);
       } catch (e: unknown) {
         if (!cancelled) {
           setPhase("error");
@@ -76,10 +115,18 @@ export default function GaussianSplatViewer({ plyUrl }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1, minHeight: 0 }}>
-      <div style={{ fontSize: "0.9rem", opacity: 0.85 }}>
-        <strong>Interactive 3D Gaussian splat</strong> — drag to orbit, scroll to zoom (viewer controls).
-        {phase === "loading" && <span style={{ marginLeft: "0.75rem", color: "#9aa3b2" }}>Loading PLY…</span>}
-        {phase === "ready" && <span style={{ marginLeft: "0.75rem", color: "#6b9e6b" }}>Ready</span>}
+      <div style={{ fontSize: "0.9rem", opacity: 0.85, lineHeight: 1.45 }}>
+        <div>
+          <strong>Interactive 3D Gaussian splat</strong> — drag to orbit, scroll to zoom (viewer controls).
+        </div>
+        {phase === "loading" && (
+          <div style={{ marginTop: "0.35rem", color: "#9aa3b2" }}>
+            Loading PLY…{loadHint ?? ""}
+          </div>
+        )}
+        {phase === "ready" && (
+          <div style={{ marginTop: "0.35rem", color: "#6b9e6b" }}>Ready</div>
+        )}
       </div>
       {errMsg && (
         <div style={{ color: "#f88", padding: "0.75rem", background: "#2a1515", borderRadius: 8 }}>
